@@ -8,12 +8,12 @@
 
 // Pin Definitions
 #define DHT_PIN 2
-#define LED_PIN 3 
+#define LED_PIN 9 
 #define BUZ_PIN 5
 #define ECHO_PIN 6
 #define TRIG_PIN 7
 #define BTN_PIN 8
-#define RST_PIN 9
+#define RST_PIN 3
 #define SS_PIN 10
 #define POT_PIN A0
 
@@ -24,7 +24,8 @@
 // Global Variables
 long distance;
 int potValue = 0;
-int delayHolder = 0;
+int buzzerDelayHolder = 0;
+int rfidDelayHolder = 0;
 int isClose = 0;
 int isBuzzed = 0;
 int isCard = 0;
@@ -34,6 +35,7 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance.
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 void setup() {
+
   Serial.begin(9600);   // Initialize serial communication
 
   SPI.begin();      // Initialize SPI bus
@@ -58,8 +60,10 @@ void setup() {
 
 void loop() {
 
+  
+
   // Distance calculator
-  distance = DistanceCalculator(&distance);
+  DistanceCalculator(&distance);
 
   isClose = (distance < DISTANCE_THRESHOLD) ? 1 : 0;
  
@@ -73,31 +77,30 @@ void loop() {
   // Button state value reader
   int buttonState = digitalRead(BTN_PIN);
 
+  
   // Adjust LED brightness and potentiometer value according to potentiometer value
   potValue = map(potValue, 0, 760, 0, 10);
   int ledBrightness = map(potValue, 0, 10, 0, 255);
   analogWrite(LED_PIN, ledBrightness);
 
-
-
   // Button and buzzed delay control
   BuzzerControl(buttonState, &isBuzzed);
 
   // Print values to serial monitor
-  SerialPrinter(humidityValue, temperatureValue, potValue, isClose, isBuzzed);
+  SerialPrinter(humidityValue, temperatureValue, potValue, isClose, isBuzzed, isCard);
 
   // Print values to LCD
-  lcdPrinter(humidityValue, temperatureValue, potValue, isBuzzed);
+  lcdPrinter(humidityValue, temperatureValue, potValue, isClose, isBuzzed, isCard);
 
   // Reads RFID module
   RFIDScanner(&isCard);
-
 
   delay(80);  // Short delay to prevent rapid value changes
 
 }
 
 int DistanceCalculator(long *distance){
+
   long duration;
 
   digitalWrite(TRIG_PIN, LOW);
@@ -116,25 +119,25 @@ int DistanceCalculator(long *distance){
 int BuzzerControl(int buttonState, int *isBuzzed){
 
     if (buttonState == HIGH) {
-    delayHolder = 1;
+    buzzerDelayHolder = 1; 
     *isBuzzed = 1;
     tone(BUZ_PIN, 450); // Start the buzzer at 450 Hz frequency
   }
 
-  if (delayHolder > 0 && delayHolder < 8){
-    delayHolder++;
+  if (buzzerDelayHolder > 0 && buzzerDelayHolder < 8){ 
+    buzzerDelayHolder++; 
   }
 
-  else if (delayHolder == 8){
-    delayHolder++;
+  else if (buzzerDelayHolder == 8){ 
+    buzzerDelayHolder++; 
     noTone(BUZ_PIN);
   }
 
-  else if (delayHolder > 8 && delayHolder < 30) delayHolder++;
+  else if (buzzerDelayHolder > 8 && buzzerDelayHolder < 30) buzzerDelayHolder++; 
 
   else {
-    delayHolder=0;
-    isBuzzed = 0;
+    buzzerDelayHolder=0; 
+    *isBuzzed = 0;
   }
 
 }
@@ -150,25 +153,48 @@ void SerialPrinter(int humidityValue, int temperatureValue, int potValue, int is
   Serial.print(F("/"));
   Serial.print(isBuzzed); // Print buzzer status
   Serial.print(F("/"));
-  Serial.println(isCard); // Print buzzer status
+  Serial.println(isCard); // Print card status
 }
 
-void lcdPrinter(int humidityValue, int temperatureValue, int potValue,int isBuzzed){
+void lcdPrinter(int humidityValue, int temperatureValue, int potValue, int isClose, int isBuzzed, int isCard){
 
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Hu: ");
   lcd.print(humidityValue); // Display humidity
-  lcd.setCursor(8, 0);
+  lcd.setCursor(10, 0);
   lcd.print(" C: ");
   lcd.print(temperatureValue); // Display temperature
   lcd.setCursor(0, 1);
 
+  if (isClose)
+    lcd.print(" Someone's near "); // Display distance sensor 
+
   if (isBuzzed)
     lcd.print("Doorbell Pressed"); // Display doorbell status
+
+  if (isCard == 1)
+    lcd.print("Access granted");  
+  
+  if (isCard == 2)
+    lcd.print("Access denied");
+
+
 }
 
 void RFIDScanner(int *isCard){
+
+  if (rfidDelayHolder > 0 && rfidDelayHolder < 10){ 
+    rfidDelayHolder++; 
+  }
+
+  else if (rfidDelayHolder == 10){
+    *isCard = 0; 
+    rfidDelayHolder = 0;
+  }
+
+
+
    // Look for new cards
 
   if (!mfrc522.PICC_IsNewCardPresent()) {
@@ -180,7 +206,10 @@ void RFIDScanner(int *isCard){
     return;
   }
 
-  // Show UID on serial monitor
+  rfidDelayHolder = 1;
+
+
+  String content = "";
 
   for (byte i = 0; i < mfrc522.uid.size; i++) {
     Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
@@ -190,11 +219,18 @@ void RFIDScanner(int *isCard){
   }
 
   content.toUpperCase();
-  if (content.substring(1) == "E7 EC EA D8") // Change here the UID of the card/cards that you want to give access
-  {
+  if (content.substring(1) == "E7 EC EA D8"){ // Change here the UID of the card/cards that you want to give access
     *isCard = 1;
-  } else { 
-    *isCard = 2;
+    tone(BUZ_PIN, 450);
+    delay(50);
+    noTone(BUZ_PIN);
   }
-  delay(3000);
+
+  else{
+    *isCard = 2;
+    tone(BUZ_PIN, 100);
+    delay(50);
+    noTone(BUZ_PIN);
+  }
+  
 }
