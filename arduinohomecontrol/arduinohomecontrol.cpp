@@ -1,10 +1,10 @@
-
 // Libraries
 #include <LiquidCrystal_I2C.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <MFRC522.h>
 #include <Wire.h>
+
 
 // Pin Definitions
 #define DHT_PIN 2
@@ -17,112 +17,55 @@
 #define SS_PIN 10
 #define POT_PIN A0
 
+
 // Constants
 #define DHTTYPE DHT11
-#define DISTANCE_THRESHOLD 50 // Threshold value for detected distance
+#define DISTANCE_THRESHOLD 30 // Threshold value for detected distance
+
 
 // Global Variables
-long distance;
-int potValue = 0;
-int buzzerDelayHolder = 0;
-int rfidDelayHolder = 0;
-int isClose = 0;
-int isBuzzed = 0;
-int isCard = 0;
+long distance;               // Distance variable
+int potValue = 0;            // Potentiometer value holder
+int buzzerDelayHolder = 0;   // Buzzer delay counter
+int rfidDelayHolder = 0;     // RFID delay counter
+int isClose = 0;             // Flag for proximity status
+int isBuzzed = 0;            // Flag for buzzer status
+int isCard = 0;              // Flag for card status
 
-DHT dht(DHT_PIN, DHTTYPE);
-MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance.
-LiquidCrystal_I2C lcd(0x27, 20, 4);
 
-void setup() {
 
-  Serial.begin(9600);   // Initialize serial communication
+DHT dht(DHT_PIN, DHTTYPE);    // DHT sensor object
+MFRC522 mfrc522(SS_PIN, RST_PIN);   // RFID module object
+LiquidCrystal_I2C lcd(0x27, 20, 4); // LCD object
 
-  SPI.begin();      // Initialize SPI bus
 
-  dht.begin();      // Initialize DHT sensor
 
-  lcd.begin();      // Initialize LCD
-  lcd.backlight();  // Turn on the backlight of the LCD screen
-
-  mfrc522.PCD_Init();   // Initialize MFRC522
-
-  pinMode(LED_PIN, OUTPUT); // Set LED pin as output
-
-  pinMode(TRIG_PIN, OUTPUT); // Set trigger pin for distance measurement
-  pinMode(ECHO_PIN, INPUT);  // Set echo pin for distance measurement
-
-  pinMode(BUZ_PIN, OUTPUT); // Set the buzzer pin as an OUTPUT
-  pinMode(BTN_PIN, INPUT);  // Set button pin as input
-
-  Serial.println();  // Print a blank line to serial monitor
-}
-
-void loop() {
-
-  
-
-  // Distance calculator
-  DistanceCalculator(&distance);
-
-  isClose = (distance < DISTANCE_THRESHOLD) ? 1 : 0;
- 
-  // Potentiometer value reader
-  potValue = analogRead(POT_PIN);
-
-  // DHT11 value reader
-  int humidityValue = dht.readHumidity();
-  int temperatureValue = dht.readTemperature();
-
-  // Button state value reader
-  int buttonState = digitalRead(BTN_PIN);
-
-  
-  // Adjust LED brightness and potentiometer value according to potentiometer value
-  potValue = map(potValue, 0, 760, 0, 10);
-  int ledBrightness = map(potValue, 0, 10, 0, 255);
-  analogWrite(LED_PIN, ledBrightness);
-
-  // Button and buzzed delay control
-  BuzzerControl(buttonState, &isBuzzed);
-
-  // Print values to serial monitor
-  SerialPrinter(humidityValue, temperatureValue, potValue, isClose, isBuzzed, isCard);
-
-  // Print values to LCD
-  lcdPrinter(humidityValue, temperatureValue, potValue, isClose, isBuzzed, isCard);
-
-  // Reads RFID module
-  RFIDScanner(&isCard);
-
-  delay(80);  // Short delay to prevent rapid value changes
-
-}
-
+// Function to calculate distance using ultrasonic sensor
 int DistanceCalculator(long *distance){
-
+  // Measure distance
   long duration;
-
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
-  
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
-
   duration = pulseIn(ECHO_PIN, HIGH);
-  
   // Calculate the distance in cm
-  *distance = (duration / 2) / 29.1; // Speed of sound is 29.1 µs/cm (may vary depending on surface) 
+  *distance = (duration / 2) / 29.1; // Speed of sound is 29.1 µs/cm (may vary depending on surface)
 }
 
-int BuzzerControl(int buttonState, int *isBuzzed){
 
-    if (buttonState == HIGH) {
+
+// Function to control the buzzer
+int BuzzerControl(int buttonState, int *isBuzzed){
+  if (buttonState == HIGH) {
     buzzerDelayHolder = 1; 
     *isBuzzed = 1;
     tone(BUZ_PIN, 450); // Start the buzzer at 450 Hz frequency
   }
+
+  if (buzzerDelayHolder == 4)
+    tone(BUZ_PIN, 600); // Start the buzzer at 600 Hz frequency
 
   if (buzzerDelayHolder > 0 && buzzerDelayHolder < 8){ 
     buzzerDelayHolder++; 
@@ -139,9 +82,12 @@ int BuzzerControl(int buttonState, int *isBuzzed){
     buzzerDelayHolder=0; 
     *isBuzzed = 0;
   }
-
 }
 
+
+
+
+// Function to print values to the serial monitor
 void SerialPrinter(int humidityValue, int temperatureValue, int potValue, int isClose, int isBuzzed, int isCard){
   Serial.print(humidityValue); // Print humidity
   Serial.print(F("/"));
@@ -156,8 +102,11 @@ void SerialPrinter(int humidityValue, int temperatureValue, int potValue, int is
   Serial.println(isCard); // Print card status
 }
 
-void lcdPrinter(int humidityValue, int temperatureValue, int potValue, int isClose, int isBuzzed, int isCard){
 
+
+
+// Function to print values to the LCD
+void lcdPrinter(int humidityValue, int temperatureValue, int potValue, int isClose, int isBuzzed, int isCard){
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Hu: ");
@@ -178,12 +127,14 @@ void lcdPrinter(int humidityValue, int temperatureValue, int potValue, int isClo
   
   if (isCard == 2)
     lcd.print("Access denied");
-
-
 }
 
-void RFIDScanner(int *isCard){
 
+
+
+
+// Function to scan RFID cards
+void RFIDScanner(int *isCard){
   if (rfidDelayHolder > 0 && rfidDelayHolder < 10){ 
     rfidDelayHolder++; 
   }
@@ -193,21 +144,15 @@ void RFIDScanner(int *isCard){
     rfidDelayHolder = 0;
   }
 
-
-
-   // Look for new cards
-
   if (!mfrc522.PICC_IsNewCardPresent()) {
     return;
   }
 
-  // Select one of the cards
   if (!mfrc522.PICC_ReadCardSerial()) {
     return;
   }
 
   rfidDelayHolder = 1;
-
 
   String content = "";
 
@@ -232,5 +177,72 @@ void RFIDScanner(int *isCard){
     delay(50);
     noTone(BUZ_PIN);
   }
-  
+}
+
+
+
+
+void setup() {
+
+  Serial.begin(9600);   // Initialize serial communication
+
+  SPI.begin();      // Initialize SPI bus
+  dht.begin();      // Initialize DHT sensor
+  lcd.init();      // Initialize LCD
+  lcd.backlight();  // Turn on the backlight of the LCD screen
+  mfrc522.PCD_Init();   // Initialize MFRC522
+
+  pinMode(LED_PIN, OUTPUT); // Set LED pin as output
+  pinMode(TRIG_PIN, OUTPUT); // Set trigger pin for distance measurement
+  pinMode(ECHO_PIN, INPUT);  // Set echo pin for distance measurement
+  pinMode(BUZ_PIN, OUTPUT); // Set the buzzer pin as an OUTPUT
+  pinMode(BTN_PIN, INPUT);  // Set button pin as input
+
+  Serial.println();  // Print a blank line to serial monitor
+}
+
+void loop() {
+
+  // Distance calculator
+  DistanceCalculator(&distance);
+
+  isClose = (distance < DISTANCE_THRESHOLD) ? 1 : 0;
+ 
+
+  // Potentiometer value reader
+  potValue = analogRead(POT_PIN);
+
+
+  // DHT11 value reader
+  int humidityValue = dht.readHumidity();
+  int temperatureValue = dht.readTemperature();
+
+
+  // Button state value reader
+  int buttonState = digitalRead(BTN_PIN);
+
+
+  // Adjust LED brightness and potentiometer value according to potentiometer value
+  potValue = map(potValue, 0, 760, 0, 10);
+  int ledBrightness = map(potValue, 0, 10, 0, 255);
+  analogWrite(LED_PIN, ledBrightness);
+
+
+  // Button and buzzed delay control
+  BuzzerControl(buttonState, &isBuzzed);
+
+
+  // Print values to serial monitor
+  SerialPrinter(humidityValue, temperatureValue, potValue, isClose, isBuzzed, isCard);
+
+
+  // Print values to LCD
+  lcdPrinter(humidityValue, temperatureValue, potValue, isClose, isBuzzed, isCard);
+
+
+  // Reads RFID module
+  RFIDScanner(&isCard);
+
+
+  delay(80);  // Short delay to prevent rapid value changes
 }
