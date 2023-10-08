@@ -5,11 +5,12 @@
 #include <DHT.h>
 #include <MFRC522.h>
 #include <Wire.h>
+#include <Servo.h>
 
 // Pin Definitions
 #define DHT_PIN 2
 #define LED_PIN 9 
-#define BUZ_PIN 5
+#define BUZ_PIN 4
 #define ECHO_PIN 6
 #define TRIG_PIN 7
 #define BTN_PIN 8
@@ -22,7 +23,9 @@
 #define DISTANCE_THRESHOLD 50 // Threshold value for detected distance
 
 // Global Variables
+Servo servoMotor;
 long distance;
+bool openDoor = false;
 int potValue = 0;
 int buzzerDelayHolder = 0;
 int rfidDelayHolder = 0;
@@ -42,7 +45,7 @@ void setup() {
 
   dht.begin();      // Initialize DHT sensor
 
-  lcd.begin();      // Initialize LCD
+  lcd.init();      // Initialize LCD
   lcd.backlight();  // Turn on the backlight of the LCD screen
 
   mfrc522.PCD_Init();   // Initialize MFRC522
@@ -58,9 +61,7 @@ void setup() {
   Serial.println();  // Print a blank line to serial monitor
 }
 
-void loop() {
-
-  
+void loop() {  
 
   // Distance calculator
   DistanceCalculator(&distance);
@@ -82,6 +83,7 @@ void loop() {
   potValue = map(potValue, 0, 760, 0, 10);
   int ledBrightness = map(potValue, 0, 10, 0, 255);
   analogWrite(LED_PIN, ledBrightness);
+  
 
   // Button and buzzed delay control
   BuzzerControl(buttonState, &isBuzzed);
@@ -92,8 +94,12 @@ void loop() {
   // Print values to LCD
   lcdPrinter(humidityValue, temperatureValue, potValue, isClose, isBuzzed, isCard);
 
+  // Opens the door
+  openTheDoor(&openDoor);
+
   // Reads RFID module
-  RFIDScanner(&isCard);
+  RFIDScanner(&isCard, &openDoor);
+
 
   delay(80);  // Short delay to prevent rapid value changes
 
@@ -182,7 +188,7 @@ void lcdPrinter(int humidityValue, int temperatureValue, int potValue, int isClo
 
 }
 
-void RFIDScanner(int *isCard){
+void RFIDScanner(int *isCard, bool *openDoor){
 
   if (rfidDelayHolder > 0 && rfidDelayHolder < 10){ 
     rfidDelayHolder++; 
@@ -220,17 +226,40 @@ void RFIDScanner(int *isCard){
 
   content.toUpperCase();
   if (content.substring(1) == "E7 EC EA D8"){ // Change here the UID of the card/cards that you want to give access
+    *openDoor = true;
     *isCard = 1;
-    tone(BUZ_PIN, 450);
-    delay(50);
-    noTone(BUZ_PIN);
   }
 
   else{
     *isCard = 2;
     tone(BUZ_PIN, 100);
-    delay(50);
+    delay(150);
     noTone(BUZ_PIN);
   }
   
+}
+
+void openTheDoor(bool *openDoor){
+  if(*openDoor == true){
+
+    tone(BUZ_PIN, 100);
+    delay(50);
+    noTone(BUZ_PIN);
+
+    servoMotor.attach(5);
+      for (int aci = 0; aci <= 180; aci += 1) {  // 0 ile 180 derece arasında dönme
+        servoMotor.write(aci);  // Açıyı ayarla
+        delay(15);  // Bekleme süresi (gecikme)
+      }
+    delay(600);
+     for (int aci = 180; aci >= 0; aci -= 1) {  // 0 ile 180 derece arasında dönme
+        servoMotor.write(aci);  // Açıyı ayarla
+        delay(15);  // Bekleme süresi (gecikme)
+      }
+    servoMotor.detach();
+
+    *openDoor = false;
+
+  }
+
 }
