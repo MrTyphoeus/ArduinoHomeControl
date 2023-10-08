@@ -1,0 +1,21 @@
+🔧 Akıllı Kapı Zili Projesi Detayları 🚪🔔
+
+Bu projede, Arduino platformunu kullanarak bir akıllı kapı zili sistemi geliştirdim. Sistem, ev giriş kapısına entegre edilerek kullanıcıya çeşitli konfor ve güvenlik avantajları sunar.
+
+🌡️ Sıcaklık ve Nem Ölçümü:
+Projede bulunan DHT11 sıcaklık ve nem sensörü sayesinde, ortamın sıcaklık ve nem seviyelerini ölçebiliriz. Bu bilgiler, ortamın konfor seviyesini değerlendirmemizi sağlar.
+
+📏 Mesafe Sensörü ile Yakınlık Kontrolü:
+HC-SR04 mesafe sensörü, kapıya yaklaşan bir kişiyi algılar. Belirli bir mesafenin altında bir kişi algılandığında, akıllı kapı zili çalışarak kullanıcıya bildirim gönderir.
+
+🚫 RFID Kart Okuma ile Erişim Kontrolü:
+Projede kullanılan MFRC522 RFID modülü ile, önceden tanımlanmış kartları okuyabiliriz. Bu, kapının sadece yetkili kişiler tarafından açılmasını sağlar. Projenin erişim kontrol özelliği, güvenliği artırır.
+
+🌈 Potansiyometre ile LED Parlaklığı Ayarlama:
+Potansiyometre, kullanıcının tercih ettiği LED parlaklığını ayarlamasını sağlar. Bu, ortamın aydınlatmasını ve görsel estetiği özelleştirmemizi sağlar.
+
+📶 Uygulama Alanları:
+Bu proje, sadece evlerde değil, aynı zamanda ofislerde, otellerde ve benzeri mekanlarda da kullanılabilir. Erişim kontrolü ve çevresel ölçümler, çeşitli alanlarda faydalı olabilir.
+
+
+#Arduino #EvOtomasyonu #IoT #Maker #Innovation
