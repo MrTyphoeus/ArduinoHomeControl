@@ -1,0 +1,20 @@
+🔧 Smart Doorbell Project Details 🚪🔔
+
+In this project, I developed a smart doorbell system using the Arduino platform. The system, when integrated into the front door of a home, offers various comfort and security advantages to the user.
+
+🌡️ Temperature and Humidity Measurement:
+Thanks to the DHT11 temperature and humidity sensor used in the project, we can measure the temperature and humidity levels of the environment. This information allows us to assess the comfort level of the environment.
+
+📏 Proximity Control with Distance Sensor:
+The HC-SR04 distance sensor detects a person approaching the door. When a person is detected at a certain distance, the smart doorbell system sends a notification to the user.
+
+🚫 Access Control with RFID Card Reading:
+With the MFRC522 RFID module used in the project, we can read pre-defined cards. This ensures that the door can only be opened by authorized individuals. The access control feature of the project enhances security.
+
+🌈 Adjusting LED Brightness with Potentiometer:
+The potentiometer allows the user to adjust the preferred LED brightness. This enables us to customize the illumination of the environment and enhance visual aesthetics.
+
+📶 Application Areas:
+This project can be used not only in homes but also in offices, hotels, and similar locations. Access control and environmental measurements can be useful in various settings.
+
+#Arduino #HomeAutomation #IoT #Maker #Innovation
